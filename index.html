@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Word Journal - Track Your Mental Wellbeing</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <style>
+        :root {
+            --primary: #7371fc;
+            --secondary: #a594f9;
+            --background: #f5f6fe;
+            --text: #2c3e50;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--background);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .journal-input {
+            height: 300px;
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            resize: none;
+            margin-bottom: 15px;
+        }
+
+        .button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: transform 0.2s;
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+        }
+
+        .insights {
+            padding: 20px;
+        }
+
+        .mood-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .mood-circle {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            margin-right: 20px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: var(--background);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .chart-container {
+            height: 300px;
+            margin-top: 20px;
+        }
+
+        .donate-section {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .donate-button {
+            background: #00b894;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            margin-top: 15px;
+            transition: all 0.3s;
+        }
+
+        .donate-button:hover {
+            background: #00a884;
+            transform: translateY(-2px);
+        }
+
+        #wordCloud {
+            width: 100%;
+            height: 200px;
+            margin-top: 20px;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>✍️ AI Word Journal</h1>
+            <p>Track your thoughts, understand your emotions, and gain valuable insights through AI analysis</p>
+        </header>
+
+        <div class="main-grid">
+            <div class="card">
+                <textarea 
+                    id="journalInput" 
+                    class="journal-input" 
+                    placeholder="Write your thoughts here... How are you feeling today?"
+                ></textarea>
+                <button class="button" onclick="analyzeEntry()">Analyze My Entry</button>
+                
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>Analyzing your entry...</p>
+                </div>
+            </div>
+
+            <div class="card insights">
+                <div class="mood-indicator">
+                    <div class="mood-circle" id="moodCircle">
+                        <span id="moodScore">--</span>
+                    </div>
+                    <div>
+                        <h3>Mood Score</h3>
+                        <p id="moodDescription">Write an entry to see your mood analysis</p>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Word Count</h3>
+                        <div class="stat-value" id="wordCount">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Key Topics</h3>
+                        <div class="stat-value" id="topicCount">0</div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <canvas id="emotionChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="donate-section">
+            <h2>Support AI Word Journal</h2>
+            <p>Help us keep this tool free and improve it with new features!</p>
+            <button class="donate-button" onclick="openDonation()">☕ Buy me a coffee</button>
+        </div>
+    </div>
+
+    <script>
+        let emotionChart = null;
+
+        function getMoodColor(score) {
+            if (score >= 0.8) return '#00b894';
+            if (score >= 0.6) return '#00cec9';
+            if (score >= 0.4) return '#fdcb6e';
+            if (score >= 0.2) return '#e17055';
+            return '#d63031';
+        }
+
+        function getMoodDescription(score) {
+            if (score >= 0.8) return 'Very positive - Keep up the great energy!';
+            if (score >= 0.6) return 'Positive - You\'re doing well!';
+            if (score >= 0.4) return 'Neutral - Finding balance';
+            if (score >= 0.2) return 'Somewhat negative - Take some deep breaths';
+            return 'Negative - Consider talking to someone';
+        }
+
+        function updateChart(emotions) {
+            const ctx = document.getElementById('emotionChart').getContext('2d');
+            
+            if (emotionChart) {
+                emotionChart.destroy();
+            }
+
+            emotionChart = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: Object.keys(emotions),
+                    datasets: [{
+                        label: 'Emotion Intensity',
+                        data: Object.values(emotions),
+                        backgroundColor: 'rgba(115, 113, 252, 0.2)',
+                        borderColor: 'rgba(115, 113, 252, 1)',
+                        pointBackgroundColor: 'rgba(115, 113, 252, 1)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgba(115, 113, 252, 1)'
+                    }]
+                },
+                options: {
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            max: 1
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+
+        async function analyzeEntry() {
+            const text = document.getElementById('journalInput').value;
+            if (!text.trim()) return;
+
+            document.getElementById('loading').style.display = 'block';
+
+            try {
+                // Call our secure Netlify function instead of OpenAI directly
+                const response = await fetch('/.netlify/functions/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text: text })
+                });
+
+                const analysis = await response.json();
+
+                // Update UI with analysis results
+                document.getElementById('moodScore').textContent = Math.round(analysis.moodScore * 100);
+                document.getElementById('moodCircle').style.backgroundColor = getMoodColor(analysis.moodScore);
+                document.getElementById('moodDescription').textContent = getMoodDescription(analysis.moodScore);
+                document.getElementById('wordCount').textContent = text.trim().split(/\s+/).length;
+                document.getElementById('topicCount').textContent = analysis.topicCount;
+
+                updateChart(analysis.emotions);
+            } catch (error) {
+                console.error('Error analyzing entry:', error);
+                alert('Error analyzing your entry. Please try again.');
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        function openDonation() {
+            // Replace with your actual donation link (e.g., Ko-fi, Buy Me a Coffee, PayPal)
+            window.open('YOUR_DONATION_LINK', '_blank');
+        }
+
+        // Initialize empty chart
+        updateChart({
+            joy: 0,
+            sadness: 0,
+            anxiety: 0,
+            confidence: 0,
+            anger: 0
+        });
+    </script>
+</body>
+</html>
